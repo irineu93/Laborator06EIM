@@ -72,6 +72,153 @@ public class ServerFragment extends Fragment {
             while (isRunning) {
 
                 // TODO: exercise 7a
+                String request = new String();
+                try {
+                    Log.d(Constants.TAG, "[SERVER] Waiting to receive data with prefix \"" + expectedWordPrefix + "\" on socket " + socket);
+                    request = requestReader.readLine();
+                    final String finalizedRequest = request;
+                    serverHistoryTextView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            serverHistoryTextView.setText("Server received word " + finalizedRequest + " from client\n" + serverHistoryTextView.getText().toString());
+                        }
+                    });
+                    Log.d(Constants.TAG, "[SERVER] Received " + request + " on socket " + socket);
+                } catch (IOException ioException) {
+                    Log.e(Constants.TAG, "An exception has occurred: " + ioException.getMessage());
+                    if (Constants.DEBUG) {
+                        ioException.printStackTrace();
+                    }
+                }
+                try {
+                    responseStream = socket.getOutputStream();
+                } catch (IOException ioException) {
+                    Log.e(Constants.TAG, "An exception has occurred: " + ioException.getMessage());
+                    if (Constants.DEBUG) {
+                        ioException.printStackTrace();
+                    }
+                }
+//                PrintStream responsePrintWriter = new PrintStream(responseStream);
+                if (Constants.END_GAME.equals(request)) {
+                    Log.d(Constants.TAG, "[SERVER] Sent \"" + Constants.END_GAME + "\" on socket " + socket);
+                    responsePrintWriter.println(Constants.END_GAME);
+                    serverHistoryTextView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            serverHistoryTextView.setText("Communication ended!\n" + serverHistoryTextView.getText().toString());
+                        }
+                    });
+                    isRunning = false;
+                } else {
+                    if ((Utilities.wordValidation(request)) && (request.length() > 2) && (expectedWordPrefix.isEmpty() || request.startsWith(expectedWordPrefix))) {
+                        String wordPrefix = request.substring(request.length()-2, request.length());
+                        List<String> wordList = Utilities.getWordListStartingWith(wordPrefix);
+
+                        if (wordList.size() == 0) {
+                            Log.d(Constants.TAG, "[SERVER] Sent \"" + Constants.END_GAME + "\" on socket " + socket);
+                            responsePrintWriter.println(Constants.END_GAME);
+                            serverHistoryTextView.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    serverHistoryTextView.setText("Server sent word \"" + Constants.END_GAME + "\" to client because it was locked out\n" + serverHistoryTextView.getText().toString());
+                                }
+                            });
+                            isRunning = false;
+                        } else {
+                            int wordIndex = random.nextInt(wordList.size());
+                            final String word = wordList.get(wordIndex);
+                            expectedWordPrefix = word.substring(word.length()-2, word.length());
+                            Log.d(Constants.TAG, "[SERVER] Sent \"" + word + "\" on socket " + socket);
+                            responsePrintWriter.println(wordList.get(wordIndex));
+                            serverHistoryTextView.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    serverHistoryTextView.setText("Server sent word " + word + " to client\n" + serverHistoryTextView.getText().toString());
+                                }
+                            });
+                        }
+                    } else {
+                        Log.d(Constants.TAG, "[SERVER] Sent \"" + request + "\" on socket " + socket);
+                        responsePrintWriter.println(request);
+                        final String finalizedRequest = request;
+                        serverHistoryTextView.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                serverHistoryTextView.setText("Server sent back the word " + finalizedRequest + " to client as it is not valid!\n" + serverHistoryTextView.getText().toString());
+                            }
+                        });
+                    }
+                }
+//                try {
+//                    Log.d(Constants.TAG, "[SERVER] Waiting to receive data with prefix \"" + expectedWordPrefix + "\" on socket " + socket);
+//                    String receivedWord = requestReader.readLine();
+//                    int wordLen = receivedWord.length();
+//                    final String finalizedRequest = receivedWord;
+//                    serverHistoryTextView.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            serverHistoryTextView.setText("Server received word " + finalizedRequest + " from client\n" + serverHistoryTextView.getText().toString());
+//                        }
+//                    });
+//                    Log.d(Constants.TAG, "[SERVER] Received " + receivedWord + " on socket " + socket);
+//
+//                    if (receivedWord.equals(Constants.END_GAME)) {
+//                        Log.d(Constants.TAG, "[SERVER] Sent \"" + Constants.END_GAME + "\" on socket " + socket);
+//                        responsePrintWriter.println(Constants.END_GAME);
+//                        serverHistoryTextView.post(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                serverHistoryTextView.setText("Communication ended!\n" + serverHistoryTextView.getText().toString());
+//                            }
+//                        });
+//                        isRunning = false;
+//                    }
+//                    else {
+//                        boolean isValid = Utilities.wordValidation(receivedWord);
+//
+//                        if (isValid) {
+//
+//                            String wordSuffix = receivedWord.substring(wordLen - 2, wordLen);
+//
+//                            if (!expectedWordPrefix.equals("") && wordSuffix.equals(expectedWordPrefix)) {
+//
+//                                List<String> wordList = Utilities.getWordListStartingWith(wordSuffix);
+//                                if (wordList.size() >= 1) {
+//                                    int randIDx = random.nextInt(wordList.size());
+//                                    String toSendWord = wordList.get(randIDx);
+//                                    expectedWordPrefix = toSendWord.substring(0, 2);
+//                                    responsePrintWriter.print(toSendWord);
+//                                }
+//                                else {
+//                                    responsePrintWriter.print(Constants.END_GAME);
+//                                }
+//                            }
+//                            else {
+//                                Log.d(Constants.TAG, "[SERVER] Sent \"" + receivedWord + "\" on socket " + socket);
+//                                responsePrintWriter.println(receivedWord);
+//                                final String finalizedRequest = receivedWord;
+//                                serverHistoryTextView.post(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        serverHistoryTextView.setText("Server sent back the word " + finalizedRequest + " to client as it is not valid!\n" + serverHistoryTextView.getText().toString());
+//                                    }
+//                                });
+//                            }
+//                        } else {
+//                            Log.d(Constants.TAG, "[SERVER] Sent \"" + receivedWord + "\" on socket " + socket);
+//                            responsePrintWriter.println(receivedWord);
+//                            final String finalizedRequest = receivedWord;
+//                            serverHistoryTextView.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    serverHistoryTextView.setText("Server sent back the word " + finalizedRequest + " to client as it is not valid!\n" + serverHistoryTextView.getText().toString());
+//                                }
+//                            });
+//                        }
+//                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
 
             }
             try {
