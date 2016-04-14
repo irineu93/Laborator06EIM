@@ -28,20 +28,42 @@ public class FTPServerWelcomeMessageActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(String... params) {
+            Socket socket = null;
             try {
                 // TODO: exercise 4
                 // open socket with FTPServerAddress (taken from params[0]) and port (Constants.FTP_PORT = 21)
+                socket = new Socket(params[0], Constants.FTP_PORT);
                 // get the BufferedReader attached to the socket (call to the Utilities.getReader() method)
+                BufferedReader bufferedReader = Utilities.getReader(socket);
+
                 // should the line start with Constants.FTP_MULTILINE_START_CODE, the welcome message is processed
-                // read lines from server while
-                // - the value is different from Constants.FTP_MULTILINE_END_CODE1
-                // - the value does not start with Constants.FTP_MULTILINE_START_CODE2
-                // append the line to the welcomeMessageTextView text view content (on the UI thread!!!) - publishProgress(...)
-                // close the socket
+                String line = bufferedReader.readLine();
+                if (line != null && line.startsWith(Constants.FTP_MULTILINE_START_CODE)) {
+                    // read lines from server while
+                    // - the value is different from Constants.FTP_MULTILINE_END_CODE1
+                    // - the value does not start with Constants.FTP_MULTILINE_START_CODE2
+                    // append the line to the welcomeMessageTextView text view content (on the UI thread!!!) - publishProgress(...)
+                    while ((line = bufferedReader.readLine()) != null) {
+                        if (!line.equals(Constants.FTP_MULTILINE_END_CODE1) && !line.startsWith(Constants.FTP_MULTILINE_END_CODE2)) {
+                            publishProgress(line);
+                        } else {
+                            break;
+                        }
+                    }
+                }
             } catch (Exception exception) {
                 Log.d(Constants.TAG, exception.getMessage());
                 if (Constants.DEBUG) {
                     exception.printStackTrace();
+                }
+            } finally {
+                // close the socket
+                if (socket != null) {
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
             return null;
@@ -56,6 +78,7 @@ public class FTPServerWelcomeMessageActivity extends AppCompatActivity {
         protected void onProgressUpdate(String... progress) {
             // TODO: exercise 4
             // append the progress[0] to the FTPServerAddressEditText edit text
+            welcomeMessageTextView.append(progress[0] + "\n");
         }
 
         @Override

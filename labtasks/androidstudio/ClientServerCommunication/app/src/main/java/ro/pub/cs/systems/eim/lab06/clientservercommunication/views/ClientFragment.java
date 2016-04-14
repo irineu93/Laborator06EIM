@@ -29,6 +29,7 @@ public class ClientFragment extends Fragment {
 
         @Override
         protected Void doInBackground(String... params) {
+            Socket socket = null;
             try {
 
                 // TODO: exercise 6b
@@ -39,10 +40,29 @@ public class ClientFragment extends Fragment {
                 // by publishing the progress - with the publishProgress(...) method - to the UI thread
                 // - close the socket to the server
 
+                socket = new Socket(params[0], Integer.parseInt(params[1]));
+                BufferedReader bufferedReader = Utilities.getReader(socket);
+
+
+                String line;
+                while((line = bufferedReader.readLine()) != null) {
+                    publishProgress(line);
+                }
+
+                socket.close();
+
             } catch (Exception exception) {
                 Log.e(Constants.TAG, "An exception has occurred: " + exception.getMessage());
                 if (Constants.DEBUG) {
                     exception.printStackTrace();
+                }
+            } finally {
+                try {
+                    if (socket != null) {
+                        socket.close();
+                    }
+                } catch (IOException ioException) {
+                    ;
                 }
             }
             return null;
@@ -52,12 +72,14 @@ public class ClientFragment extends Fragment {
         protected void onPreExecute() {
             // TODO: exercise 6b
             // - reset the content of serverMessageTextView
+            serverMessageTextView.setText("");
         }
 
         @Override
         protected void onProgressUpdate(String... progress) {
             // TODO: exercise 6b
             // - append the content to serverMessageTextView
+            serverMessageTextView.append(progress[0] + "\n");
         }
 
         @Override
